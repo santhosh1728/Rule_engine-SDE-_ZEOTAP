@@ -20,9 +20,9 @@ def create_rule_endpoint():
     try:
         ast = create_rule(rule_string)
         rules_storage[rule_name] = ast  # Store the AST with rule name as key
-        return jsonify({"message": "Rule created successfully", "ast": str(ast)})
+        return jsonify({"message": "Rule created successfully", "ast": str(ast)}), 201
     except ValueError as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/combine_rules', methods=['POST'])
 def combine_rules_endpoint():
@@ -34,9 +34,9 @@ def combine_rules_endpoint():
     try:
         rules = [rules_storage[rule_name] for rule_name in rule_names if rule_name in rules_storage]
         combined_ast = combine_rules(rules)
-        return jsonify({"message": "Rules combined successfully", "combined_ast": str(combined_ast)})
+        return jsonify({"message": "Rules combined successfully", "combined_ast": str(combined_ast)}), 200
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/evaluate_rule', methods=['POST'])
 def evaluate_rule_endpoint():
@@ -52,9 +52,9 @@ def evaluate_rule_endpoint():
 
     try:
         result = evaluate_rule(rules_storage[rule_name], input_data)
-        return jsonify({"message": "Evaluation successful", "result": result})
+        return jsonify({"message": "Evaluation successful", "result": result}), 200
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)

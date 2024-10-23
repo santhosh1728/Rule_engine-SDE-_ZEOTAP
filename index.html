@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rule Engine</title>
+    <title>Rule Engine Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -17,21 +17,41 @@
             text-align: center;
             margin-bottom: 20px;
         }
-        .container {
-            max-width: 800px;
+        .dashboard {
+            max-width: 1200px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
         .card {
             background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+        }
+        .card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         .card h2 {
             color: #3498db;
+            margin-bottom: 10px;
+        }
+        .overview {
+            grid-column: 1 / -1; /* Span all columns */
+            text-align: left;
+        }
+        .overview-item {
+            display: flex;
+            justify-content: space-between;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 16px;
         }
         input[type="text"], textarea {
             width: 100%;
@@ -40,11 +60,10 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 14px;
-            box-sizing: border-box;
         }
         button {
             background-color: #3498db;
-            color: white;
+            color: rgba(237, 239, 240, 0.956);
             padding: 10px;
             border: none;
             border-radius: 5px;
@@ -62,15 +81,33 @@
             background-color: #ecf0f1;
             border-radius: 5px;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            white-space: pre-wrap; /* Preserve formatting */
+            white-space: pre-wrap;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Rule Engine</h1>
+    <h1>Rule Engine Dashboard</h1>
 
-    <div class="container">
+    <div class="dashboard">
+        <!-- Overview Section -->
+        <div class="card overview">
+            <h2>Overview</h2>
+            <div class="overview-item">
+                <span>Rules Created:</span>
+                <span id="rulesCount">0</span>
+            </div>
+            <div class="overview-item">
+                <span>Combined Rules:</span>
+                <span id="combinedRulesCount">0</span>
+            </div>
+            <div class="overview-item">
+                <span>Last Evaluation Result:</span>
+                <span id="lastEvaluationResult">None</span>
+            </div>
+        </div>
+
+        <!-- Create Rule Card -->
         <div class="card">
             <h2>Create Rule</h2>
             <input type="text" id="create_rule_name" placeholder="Rule Name" />
@@ -78,23 +115,44 @@
             <button onclick="createRule()">Create Rule</button>
         </div>
 
+        <!-- Combine Rules Card -->
         <div class="card">
             <h2>Combine Rules</h2>
             <input type="text" id="combine_rule_names" placeholder="Rule Names (comma-separated)" />
             <button onclick="combineRules()">Combine Rules</button>
         </div>
 
+        <!-- Evaluate Rule Card -->
         <div class="card">
             <h2>Evaluate Rule</h2>
             <input type="text" id="evaluate_rule_name" placeholder="Rule Name" />
             <textarea id="evaluate_data" rows="4" placeholder='Data (JSON format, e.g., {"age": 35, "department": "Sales"})'></textarea>
             <button onclick="evaluateRule()">Evaluate Rule</button>
         </div>
-
-        <div id="result"></div>
     </div>
 
+    <div id="result"></div>
+
     <script>
+        let rulesCreated = 0;
+        let combinedRules = 0;
+
+        function updateOverview() {
+            document.getElementById("rulesCount").innerText = rulesCreated;
+            document.getElementById("combinedRulesCount").innerText = combinedRules;
+        }
+
+        function displayResult(result) {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerText = JSON.stringify(result, null, 2);
+            resultDiv.style.display = 'block';
+
+            // Update the last evaluation result in the overview
+            if (result.message && result.message.includes("Evaluation")) {
+                document.getElementById("lastEvaluationResult").innerText = result.result ? "Success" : "Failure";
+            }
+        }
+
         async function createRule() {
             const name = document.getElementById("create_rule_name").value;
             const rule = document.getElementById("create_rule_string").value;
@@ -107,7 +165,11 @@
                 body: JSON.stringify({ name, rule })
             });
             const result = await response.json();
-            document.getElementById("result").innerText = JSON.stringify(result, null, 2);
+            if (result.message && result.message.includes("created")) {
+                rulesCreated++;
+            }
+            displayResult(result);
+            updateOverview();
         }
 
         async function combineRules() {
@@ -121,22 +183,30 @@
                 body: JSON.stringify({ rule_names: ruleNames.split(',').map(name => name.trim()) })
             });
             const result = await response.json();
-            document.getElementById("result").innerText = JSON.stringify(result, null, 2);
+            if (result.message && result.message.includes("combined")) {
+                combinedRules++;
+            }
+            displayResult(result);
+            updateOverview();
         }
 
         async function evaluateRule() {
             const ruleName = document.getElementById("evaluate_rule_name").value;
             const data = document.getElementById("evaluate_data").value;
 
-            const response = await fetch('/evaluate_rule', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ rule_name: ruleName, data: JSON.parse(data) })
-            });
-            const result = await response.json();
-            document.getElementById("result").innerText = JSON.stringify(result, null, 2);
+            try {
+                const response = await fetch('/evaluate_rule', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rule_name: ruleName, data: JSON.parse(data) })
+                });
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: "Invalid JSON format" });
+            }
         }
     </script>
 </body>
