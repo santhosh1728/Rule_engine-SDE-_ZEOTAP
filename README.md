@@ -8,7 +8,7 @@ To set up the project locally, follow these steps:
 Clone the Repository
 
 
-bash
+
 Copy code
 git clone https://github.com/santhosh1728/Rule_engine-SDE-_ZEOTAP.git
 
@@ -17,7 +17,6 @@ cd rule-engin
 Install Dependencies Make sure you have Python and pip installed, then run:
 
 
-bash
 Copy code
 
 pip install Flask
